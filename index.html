@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planetary Defense Command Center</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2332 100%);
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        .command-header {
+            background: rgba(0,0,0,0.4);
+            padding: 15px 30px;
+            border-bottom: 2px solid #3498db;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        
+        .command-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .command-title h1 {
+            font-size: 1.8em;
+            color: #3498db;
+        }
+        
+        .threat-level {
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            animation: pulse 2s infinite;
+        }
+        
+        .threat-moderate {
+            background: rgba(241, 196, 15, 0.3);
+            border: 2px solid #f1c40f;
+            color: #f1c40f;
+        }
+        
+        .threat-high {
+            background: rgba(231, 76, 60, 0.3);
+            border: 2px solid #e74c3c;
+            color: #e74c3c;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .command-clock {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .clock-item {
+            text-align: center;
+        }
+        
+        .clock-label {
+            font-size: 0.75em;
+            color: #7f8c8d;
+            text-transform: uppercase;
+        }
+        
+        .clock-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #3498db;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            height: calc(100vh - 80px);
+            gap: 0;
+        }
+        
+        .left-panel {
+            background: rgba(0,0,0,0.3);
+            border-right: 1px solid rgba(52, 152, 219, 0.3);
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .center-panel {
+            display: grid;
+            grid-template-rows: 400px 1fr;
+            gap: 0;
+        }
+        
+        .right-panel {
+            background: rgba(0,0,0,0.3);
+            border-left: 1px solid rgba(52, 152, 219, 0.3);
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .map-view {
+            background: rgba(0,0,0,0.5);
+            border-bottom: 1px solid rgba(52, 152, 219, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tactical-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            height: 100%;
+            gap: 1px;
+            background: rgba(52, 152, 219, 0.2);
+        }
+        
+        .tactical-panel {
+            background: rgba(0,0,0,0.4);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .panel-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 3px solid #3498db;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(52, 152, 219, 0.3);
+        }
+        
+        .section-title {
+            color: #3498db;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: blink 1.5s infinite;
+        }
+        
+        .status-green { background: #2ecc71; }
+        .status-yellow { background: #f1c40f; }
+        .status-red { background: #e74c3c; }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .metric-label {
+            color: #95a5a6;
+            font-size: 0.9em;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+            font-size: 1em;
+        }
+        
+        .value-good { color: #2ecc71; }
+        .value-warning { color: #f1c40f; }
+        .value-critical { color: #e74c3c; }
+        
+        .progress-container {
+            margin: 10px 0;
+        }
+        
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+            margin-bottom: 5px;
+            color: #95a5a6;
+        }
+        
+        .progress-bar {
+            height: 20px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+        
+        .progress-good { background: linear-gradient(90deg, #27ae60, #2ecc71); }
+        .progress-warning { background: linear-gradient(90deg, #f39c12, #f1c40f); }
+        .progress-critical { background: linear-gradient(90deg, #c0392b, #e74c3c); }
+        
+        .force-deployment {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .force-card {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .force-card:hover {
+            background: rgba(52, 152, 219, 0.2);
+            border-color: #3498db;
+            transform: translateY(-2px);
+        }
+        
+        .force-icon {
+            font-size: 2em;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        
+        .force-name {
+            text-align: center;
+            font-size: 0.9em;
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+        
+        .force-status {
+            text-align: center;
+            font-size: 0.8em;
+            color: #95a5a6;
+        }
+        
+        .alert-item {
+            background: rgba(231, 76, 60, 0.2);
+            border-left: 4px solid #e74c3c;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .alert-item:hover {
+            background: rgba(231, 76, 60, 0.3);
+        }
+        
+        .alert-time {
+            font-size: 0.75em;
+            color: #e74c3c;
+            margin-bottom: 5px;
+        }
+        
+        .alert-message {
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .map-layer {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: 
+                radial-gradient(circle at 30% 40%, rgba(52, 152, 219, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(46, 204, 113, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 80%, rgba(231, 76, 60, 0.1) 0%, transparent 40%);
+        }
+        
+        .map-marker {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid;
+            animation: markerPulse 2s infinite;
+        }
+        
+        .marker-friendly {
+            background: #2ecc71;
+            border-color: #27ae60;
+        }
+        
+        .marker-hostile {
+            background: #e74c3c;
+            border-color: #c0392b;
+        }
+        
+        .marker-contested {
+            background: #f1c40f;
+            border-color: #f39c12;
+        }
+        
+        @keyframes markerPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+        }
+        
+        .map-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(52, 152, 219, 0.5);
+        }
+        
+        .overlay-title {
+            color: #3498db;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+            font-size: 0.8em;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .intel-item {
+            background: rgba(52, 152, 219, 0.1);
+            border-left: 3px solid #3498db;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        
+        .intel-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .intel-source {
+            color: #3498db;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .intel-confidence {
+            font-size: 0.75em;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        
+        .confidence-high {
+            background: rgba(46, 204, 113, 0.3);
+            color: #2ecc71;
+        }
+        
+        .confidence-medium {
+            background: rgba(241, 196, 15, 0.3);
+            color: #f1c40f;
+        }
+        
+        .confidence-low {
+            background: rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+        }
+        
+        .intel-content {
+            font-size: 0.85em;
+            line-height: 1.4;
+            color: #ecf0f1;
+        }
+        
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .resource-item {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            text-align: center;
+        }
+        
+        .resource-icon {
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+        
+        .resource-label {
+            font-size: 0.75em;
+            color: #95a5a6;
+            margin-bottom: 3px;
+        }
+        
+        .resource-value {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
+        .scenario-panel {
+            background: rgba(155, 89, 182, 0.2);
+            border-left: 3px solid #9b59b6;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        
+        .scenario-title {
+            color: #9b59b6;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .scenario-options {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        
+        .timer-display {
+            background: rgba(231, 76, 60, 0.2);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2em;
+            color: #e74c3c;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+        
+        .comms-message {
+            background: rgba(52, 152, 219, 0.1);
+            border-left: 3px solid #3498db;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        
+        .comms-from {
+            color: #3498db;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #0a1628 0%, #1a2332 100%);
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 2px solid rgba(52, 152, 219, 0.5);
+            position: relative;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #e74c3c;
+            transition: transform 0.3s;
+        }
+        
+        .close-modal:hover {
+            transform: scale(1.2) rotate(90deg);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(52, 152, 219, 0.5);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(52, 152, 219, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="command-header">
+        <div class="command-title">
+            <h1>🌍 PLANETARY DEFENSE COMMAND</h1>
+            <div class="threat-level threat-moderate" id="threatLevel">
+                THREAT LEVEL: MODERATE
+            </div>
+        </div>
+        <div class="command-clock">
+            <div class="clock-item">
+                <div class="clock-label">Local Time</div>
+                <div class="clock-value" id="localTime">--:--:--</div>
+            </div>
+            <div class="clock-item">
+                <div class="clock-label">Mission Day</div>
+                <div class="clock-value" id="missionDay">D+034</div>
+            </div>
+            <div class="clock-item">
+                <div class="clock-label">DEFCON</div>
+                <div class="clock-value" id="defcon">3</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-grid">
+        <!-- LEFT PANEL: Command Structure & Resources -->
+        <div class="left-panel">
+            <div class="panel-section">
+                <div class="section-header">
+                    <div class="section-title">⚡ Critical Alerts</div>
+                    <div class="status-indicator">
+                        <div class="status-dot status-red"></div>
+                        <span>3 Active</span>
+                    </div>
+                </div>
+                
+                <div class="alert-item" onclick="showAlert('cyber')">
+                    <div class="alert-time">⏰ 14 minutes ago</div>
+                    <div class="alert-message">
+                        <strong>CYBER ATTACK:</strong> Critical infrastructure penetration detected. Power grid control systems compromised in Sector 7.
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-danger">Isolate Systems</button>
+                        <button class="btn btn-primary">Deploy Cyber Team</button>
+                    </div>
+                </div>
+                
+                <div class="alert-item" onclick="showAlert('proxy')">
+                    <div class="alert-time">⏰ 28 minutes ago</div>
+                    <div class="alert-message">
+                        <strong>PROXY FORCE ACTIVITY:</strong> 47 hostile incidents reported across 3 regions. Casualties: 12 KIA, 34 WIA.
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-danger">Authorize Strike</button>
+                        <button class="btn btn-primary">Negotiate</button>
+                    </div>
+                </div>
+                
+                <div class="alert-item" onclick="showAlert('intel')">
+                    <div class="alert-time">⏰ 1 hour ago</div>
+                    <div class="alert-message">
+                        <strong>INTELLIGENCE WARNING:</strong> Enemy force buildup detected 200km from border. Est. 40,000 troops (confidence: 68%).
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-success">Reposition Forces</button>
+                        <button class="btn btn-primary">Request ISR</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <div class="section-header">
+                    <div class="section-title">🎯 Strategic Resources</div>
+                    <div class="status-indicator">
+                        <div class="status-dot status-yellow"></div>
+                        <span>Adequate</span>
+                    </div>
+                </div>
+                
+                <div class="resource-grid">
+                    <div class="resource-item">
+                        <div class="resource-icon">💰</div>
+                        <div class="resource-label">Defense Budget</div>
+                        <div class="resource-value value-good">$2.1T</div>
+                    </div>
+                    <div class="resource-item">
+                        <div class="resource-icon">⚡</div>
+                        <div class="resource-label">Action Points</div>
+                        <div class="resource-value value-good">12</div>
+                    </div>
+                    <div class="resource-item">
+                        <div class="resource-icon">⛽</div>
+                        <div class="resource-label">Fuel Reserves</div>
+                        <div class="resource-value value-warning">89 days</div>
+                    </div>
+                    <div class="resource-item">
+                        <div class="resource-icon">🎖️</div>
+                        <div class="resource-label">Manpower</div>
+                        <div class="resource-value value-good">2.4M</div>
+                    </div>
+                    <div class="resource-item">
+                        <div class="resource-icon">🔫</div>
+                        <div class="resource-label">Ammunition</div>
+                        <div class="resource-value value-warning">67 days</div>
+                    </div>
+                    <div class="resource-item">
+                        <div class="resource-icon">🏭</div>
+                        <div class="resource-label">Industrial Cap.</div>
+                        <div class="resource-value value-good">78%</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <div class="section-header">
+                    <div class="section-title">👥 Population Status</div>
+                </div>
+                
+                <div class="metric-row">
+                    <span class="metric-label">National Morale</span>
+                    <span class="metric-value value-good">68%</span>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill progress-warning" style="width: 68%;">68%</div>
+                    </div>
+                </div>
+                
+                <div class="metric-row">
+                    <span class="metric-label">Public Support for Operations</span>
+                    <span class="metric-value value-warning">54%</span>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill progress-warning" style="width: 54%;">54%</div>
+                    </div>
+                </div>
+                
+                <div class="metric-row">
+                    <span class="metric-label">Civil-Military Relations</span>
+                    <span class="metric-value value-good">72%</span>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill progress-good" style="width: 72%;">72%</div>
+                    </div>
+                </div>
+                
+                <div class="metric-row">
+                    <span class="metric-label">Evacuations in Progress</span>
+                    <span class="metric-value value-critical">890,000</span>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <div class="section-header">
+                    <div class="section-title">🤝 Alliance Status</div>
+                    <div class="status-indicator">
+                        <div class="status-dot status-yellow"></div>
+                        <span>Strained</span>
+                    </div>
+                </div>
+                
+                <div class="metric-row">
+                    <span class="metric-label">Cohesion Index</span>
+                    <span class="metric-value value-warning">66%</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Active Allies</span>
+                    <span class="metric-value value-good">7 of 7</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Wavering Members</span>
+                    <span class="metric-value value-warning">2</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Joint Operations</span>
+                    <span class="metric-value value-good">23 Active</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- CENTER PANEL: Map & Tactical View -->
+        <div class="center-panel">
+            <div class="map-view">
+                <div class="map-layer" id="mapLayer">
+                    <!-- Map markers will be generated by JS -->
+                </div>
+                <div class="map-overlay">
+                    <div class="overlay-title">TERRITORIAL CONTROL</div>
+                    <div class="legend-item">
+                        <div class="legend-color marker-friendly"></div>
+                        <span>Friendly Control (78%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color marker-hostile"></div>
+                        <span>Hostile Control (12%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color marker-contested"></div>
+                        <span>Contested (10%)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tactical-grid">
+                <div class="tactical-panel">
+                    <div class="section-header">
+                        <div class="section-title">🚀 Force Deployment</div>
+                        <div class="status-indicator">
+                            <div class="status-dot status-green"></div>
+                            <span>Ready</span>
+                        </div>
+                    </div>
+                    
+                    <div class="force-deployment">
+                        <div class="force-card" onclick="showForceDetails('space')">
+                            <div class="force-icon">🛰️</div>
+                            <div class="force-name">Space Forces</div>
+                            <div class="force-status">92% Operational</div>
+                        </div>
+                        <div class="force-card" onclick="showForceDetails('air')">
+                            <div class="force-icon">✈️</div>
+                            <div class="force-name">Air Superiority</div>
+                            <div class="force-status">87% Ready</div>
+                        </div>
+                        <div class="force-card" onclick="showForceDetails('naval')">
+                            <div class="force-icon">⚓</div>
+                            <div class="force-name">Naval Forces</div>
+                            <div class="force-status">74% Deployed</div>
+                        </div>
+                        <div class="force-card" onclick="showForceDetails('ground')">
+                            <div class="force-icon">🪖</div>
+                            <div class="force-name">Ground Forces</div>
+                            <div class="force-status">68% Ready</div>
+                        </div>
+                        <div class="force-card" onclick="showForceDetails('cyber')">
+                            <div class="force-icon">💻</div>
+                            <div class="force-name">Cyber Command</div>
+                            <div class="force-status">95% Active</div>
+                        </div>
+                        <div class="force-card" onclick="showForceDetails('special')">
+                            <div class="force-icon">🎯</div>
+                            <div class="force-name">Special Ops</div>
+                            <div class="force-status">82% Available</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-container" style="margin-top: 15px;">
+                        <div class="progress-label">
+                            <span>Overall Readiness</span>
+                            <span>83%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill progress-good" style
